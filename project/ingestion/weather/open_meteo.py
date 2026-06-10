@@ -38,7 +38,7 @@ PARAMS = {
 
 
 def fetch_weather():
-    response = requests.get(url, params = PARAMS, timeout = 10)
+    response = requests.get(url, params = PARAMS, timeout = 30)
     response.raise_for_status()
     return response.json()
 

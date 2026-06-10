@@ -3,10 +3,6 @@
 
 # In[2]:
 
-
-get_ipython().system('pip install gtfs-realtime-bindings')
-
-
 # In[81]:
 
 

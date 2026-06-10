@@ -1,0 +1,32 @@
+import subprocess
+import sys
+from datetime import datetime, timezone
+
+SCRIPTS = [
+    "project/ingestion/mta/trip_update.py",
+    "project/ingestion/mta/vehicle_positions.py",
+    "project/ingestion/mta/alert.py",
+    "project/ingestion/weather/open_meteo.py",]
+
+def run_script(path):
+    print(f"\n[{datetime.now(timezone.utc).isoformat()}] Running {path}")
+    result = subprocess.run([sys.executable, path], capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout)
+    if result.returncode != 0:
+        print(f"Error in {path}: {result.stderr}")
+    else:
+        print(f"Ok: {path}")
+    return result.returncode
+def main():
+    print(f"Pipeline started at {datetime.now(timezone.utc).isoformat()}")
+    errors = []
+    for script in SCRIPTS:
+        code = run_script(script)
+        if code != 0:
+            errors.append(script)
+    print(f"\nPipeline finished. {len(SCRIPTS)- len(errors)}/{len(SCRIPTS)} scripts succeeded.")
+    if errors:
+        print(f"Failed scripts: {', '.join(errors)}")
+if __name__ == "__main__":
+    main()
