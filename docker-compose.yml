@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  pipeline:
+    build: .
+    container_name: jz_pipeline
+    volumes:
+      - ./project/data:/app/project/data   # persist data outside container
+    environment:
+      - MTA_API_KEY=${MTA_API_KEY}
+    restart: unless-stopped
+    

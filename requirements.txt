@@ -1,0 +1,5 @@
+requests
+gtfs-realtime-bindings
+pandas
+pyarrow
+duckdb

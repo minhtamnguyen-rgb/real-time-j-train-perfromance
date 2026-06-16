@@ -76,7 +76,7 @@ def extract_jz_alerts(feed):
 
         records.append({
             "alert_id": entity.id,
-            "route_ids": [e.route_id for e in alert.informed_entity if e.route_id in ["J", "Z"]],
+            "route_ids": list(set(e.route_id for e in alert.informed_entity if e.route_id in ["J", "Z"])),
             "header": header,
             "description": description,
             "effect": alert.effect,
