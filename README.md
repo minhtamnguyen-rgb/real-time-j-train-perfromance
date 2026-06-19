@@ -103,8 +103,7 @@ export MTA_API_KEY=your_key_here
 ## Status
 - [x] Trip updates ingestion
 - [x] Alerts ingestion
-- [ ] Vehicle positions ingestion
-- [ ] Weather ingestion
-- [ ] Processing layer
-- [ ] Feature layer
+- [x] Weather ingestion
+- [x] Processing layer
+- [x] Feature layer
 - [ ] Dashboard
