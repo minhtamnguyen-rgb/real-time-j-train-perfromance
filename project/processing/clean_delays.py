@@ -2,65 +2,57 @@ import pandas as pd
 from datetime import datetime, timezone
 import os
 import glob
+from google.transit import gtfs_realtime_pb2
 
 def load_raw_delays(raw_dir="project/data/raw/mta/trip_updates"):
     files = glob.glob(f"{raw_dir}/**/*.pb", recursive=True)
     if not files:
         print("No raw trip update files found")
         return pd.DataFrame()
-    
-    # read all parquet files if you saved as parquet, otherwise parse pb
-    # assuming you saved decoded records as parquet in processing
-    # for now load the most recent .pb and re-parse
-    files.sort()
-    latest = files[-1]
-    print(f"Loading: {latest}")
-    
-    from google.transit import gtfs_realtime_pb2
-    with open(latest, "rb") as f:
-        content = f.read()
-    
-    feed = gtfs_realtime_pb2.FeedMessage()
-    feed.ParseFromString(content)
-    
-    records = []
-    for entity in feed.entity:
-        if not entity.HasField("trip_update"):
-            continue
-        trip = entity.trip_update
-        if trip.trip.route_id not in ["J", "Z"]:
-            continue
-        for stu in trip.stop_time_update:
-            records.append({
-                "vehicle_id": entity.id,
-                "trip_id": trip.trip.trip_id,
-                "route_id": trip.trip.route_id,
-                "stop_id": stu.stop_id,
-                "arrival_delay": stu.arrival.delay if stu.HasField("arrival") else None,
-                "departure_delay": stu.departure.delay if stu.HasField("departure") else None,
-                "event_time": datetime.now(timezone.utc).isoformat()
-            })
-    return pd.DataFrame(records)
+
+    print(f"Found {len(files)} raw files")
+
+    all_records = []
+    for file_path in files:
+        with open(file_path, "rb") as f:
+            content = f.read()
+
+        feed = gtfs_realtime_pb2.FeedMessage()
+        feed.ParseFromString(content)
+
+        for entity in feed.entity:
+            if not entity.HasField("trip_update"):
+                continue
+            trip = entity.trip_update
+            if trip.trip.route_id not in ["J", "Z"]:
+                continue
+            for stu in trip.stop_time_update:
+                all_records.append({
+                    "vehicle_id": entity.id,
+                    "trip_id": trip.trip.trip_id,
+                    "route_id": trip.trip.route_id,
+                    "stop_id": stu.stop_id,
+                    "arrival_delay": stu.arrival.delay if stu.HasField("arrival") else None,
+                    "departure_delay": stu.departure.delay if stu.HasField("departure") else None,
+                    "source_file": file_path,
+                    "event_time": datetime.now(timezone.utc).isoformat()
+                })
+
+    return pd.DataFrame(all_records)
 
 def clean_delays(df):
     if df.empty:
         return df
 
-    # drop rows where both delays are null — no useful signal
     df = df.dropna(subset=["arrival_delay", "departure_delay"], how="all")
-
-    # fill remaining nulls with 0 — if one exists, treat missing as on time
     df["arrival_delay"] = df["arrival_delay"].fillna(0).astype(int)
     df["departure_delay"] = df["departure_delay"].fillna(0).astype(int)
-
-    # derive delay severity label
     df["delay_severity"] = df["arrival_delay"].apply(classify_delay)
-
-    # parse event_time to datetime
     df["event_time"] = pd.to_datetime(df["event_time"], utc=True)
-
-    # add 15-min window column for later join
     df["window_start"] = df["event_time"].dt.floor("15min")
+
+    # drop exact duplicate rows in case the same .pb is processed more than once
+    df = df.drop_duplicates(subset=["vehicle_id", "trip_id", "stop_id", "source_file"])
 
     return df
 
@@ -68,11 +60,11 @@ def classify_delay(seconds):
     if seconds <= 60:
         return "on_time"
     elif seconds <= 300:
-        return "minor"       # 1-5 min
+        return "minor"
     elif seconds <= 600:
-        return "moderate"    # 5-10 min
+        return "moderate"
     else:
-        return "severe"      # 10+ min
+        return "severe"
 
 def save_processed(df, output_dir="project/data/processed/delays"):
     os.makedirs(output_dir, exist_ok=True)
