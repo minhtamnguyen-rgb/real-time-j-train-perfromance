@@ -1,0 +1,29 @@
+# Data — never commit raw, processed, or feature data
+project/data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment / secrets
+.env
+*.env
+
+# Prefect
+.prefect/
+
+# OS / editor junk
+.DS_Store
+.vscode/
+*.swp
+
+# Docker
+*.log

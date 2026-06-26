@@ -49,5 +49,6 @@ def jz_pipeline():
 if __name__ == "__main__":
     jz_pipeline.serve(
         name="jz-pipeline-every-15-min",
-        interval=900,   # seconds = 15 minutes
-    )
+        interval=900,
+        )   # seconds = 15 minutes
+    

@@ -49,6 +49,10 @@ def derive_headway_gaps(df):
     df["headway_gap_sec"] = (
         df.groupby(["route_id", "stop_id"])["mta_timestamp"].diff()
     )
+
+    # discard nonsensical gaps — real J/Z headways are never more than ~30 min
+    df.loc[df["headway_gap_sec"] > 1800, "headway_gap_sec"] = None
+
     return df
 
 def classify_headway(seconds):

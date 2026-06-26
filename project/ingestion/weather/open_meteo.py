@@ -48,8 +48,8 @@ def fetch_weather():
 
 def save_raw(data):
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    path = f"data/raw/weather/weather_{ts}.json"
-    os.makedirs("data/raw/weather", exist_ok = True)
+    path = f"project/data/raw/weather/weather_{ts}.json"
+    os.makedirs("project/data/raw/weather", exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f)
     return path
