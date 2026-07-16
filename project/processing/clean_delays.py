@@ -48,7 +48,7 @@ def clean_delays(df):
     df["arrival_delay"] = df["arrival_delay"].fillna(0).astype(int)
     df["departure_delay"] = df["departure_delay"].fillna(0).astype(int)
     df["delay_severity"] = df["arrival_delay"].apply(classify_delay)
-    df["event_time"] = pd.to_datetime(df["event_time"], utc=True)
+    df["event_time"] = pd.to_datetime(df["event_time"], utc=True, format='ISO8601')
     df["window_start"] = df["event_time"].dt.floor("15min")
 
     # drop exact duplicate rows in case the same .pb is processed more than once

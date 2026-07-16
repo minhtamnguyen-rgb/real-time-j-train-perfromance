@@ -6,11 +6,13 @@ def build_features(
     delays_dir="project/data/processed/delays",
     alerts_dir="project/data/processed/alerts",
     weather_dir="project/data/processed/weather",
-    positions_dir="project/data/processed/vehicle_positions"
+    positions_dir="project/data/processed/vehicle_positions",
+    output_dir="project/data/features/jz_combined"
 ):
     con = duckdb.connect()
+
     query = f"""
-    WITH delays AS(
+    WITH delays AS (
         SELECT
             route_id,
             window_start,
@@ -24,16 +26,14 @@ def build_features(
         SELECT
             route_id,
             window_start,
-            COUNT(*) AS alerts_active
-        FROM(
-            SELECT
-                unnest(route_ids) AS route_id,
-                window_start
-            FROM read_parquet('{alerts_dir}/*.parquet')    
+            COUNT(DISTINCT alert_id) AS alerts_active
+        FROM (
+            SELECT unnest(route_ids) AS route_id, window_start, alert_id
+            FROM read_parquet('{alerts_dir}/*.parquet')
         )
         GROUP BY route_id, window_start
     ),
-    positions AS(
+    positions AS (
         SELECT
             route_id,
             window_start,
@@ -42,9 +42,8 @@ def build_features(
         FROM read_parquet('{positions_dir}/*.parquet')
         GROUP BY route_id, window_start
     ),
-    weather AS (
-        SELECT
-            window_start,
+    weather_deduped AS (
+        SELECT DISTINCT ON (obs_hour)
             obs_hour,
             temperature_c,
             humidity_pct,
@@ -55,6 +54,7 @@ def build_features(
             is_precip,
             is_snow
         FROM read_parquet('{weather_dir}/*.parquet')
+        ORDER BY obs_hour, event_time DESC
     )
 
     SELECT
@@ -75,17 +75,17 @@ def build_features(
         w.is_precip,
         w.is_snow
     FROM delays d
-    LEFT JOIN alerts a 
-        ON d.route_id = a.route_id 
+    LEFT JOIN alerts a
+        ON d.route_id = a.route_id
         AND d.window_start = a.window_start
     LEFT JOIN positions p
-        ON d.route_id =p.route_id
+        ON d.route_id = p.route_id
         AND d.window_start = p.window_start
-    LEFT JOIN weather w 
+    LEFT JOIN weather_deduped w
         ON date_trunc('hour', d.window_start) = w.obs_hour
     ORDER BY d.window_start DESC
     """
-    
+
     df = con.execute(query).fetchdf()
     con.close()
     return df

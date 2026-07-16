@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide",
 )
 
-FEATURES_PATH = "project/data/features/jz_combined/jz_features.parquet"
+WAREHOUSE_PATH = "warehouse/dev.duckdb"
 
 # ---------- Style ----------
 st.markdown("""
@@ -30,10 +30,15 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def load_features():
     try:
-        df = pd.read_parquet(FEATURES_PATH)
-        df["window_start"] = pd.to_datetime(df["window_start"], utc=True)
-        return df.sort_values("window_start")
-    except FileNotFoundError:
+        con = duckdb.connect(WAREHOUSE_PATH, read_only=True)
+        df = con.execute("""
+            SELECT * FROM fct_jz_performance
+            ORDER BY window_start DESC
+        """).fetchdf()
+        con.close()
+        return df
+    except Exception as e:
+        st.error(f"Failed to load from warehouse: {e}")
         return pd.DataFrame()
 
 df = load_features()

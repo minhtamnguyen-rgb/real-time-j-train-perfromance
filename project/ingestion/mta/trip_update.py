@@ -46,8 +46,8 @@ def parse_feed(content):
 
 def save_raw(content):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = f"data/raw/mta/trip_updates/jz_{ts}.pb"
-    os.makedirs("data/raw/mta/trip_updates", exist_ok=True)
+    path = f"project/data/raw/mta/trip_updates/jz_{ts}.pb"
+    os.makedirs("project/data/raw/mta/trip_updates", exist_ok=True)
     with open(path, "wb") as f:
         f.write(content)
     return path
