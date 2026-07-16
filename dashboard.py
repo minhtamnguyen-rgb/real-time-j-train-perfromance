@@ -11,20 +11,117 @@ st.set_page_config(
 
 WAREHOUSE_PATH = "warehouse/dev.duckdb"
 
-# ---------- Style ----------
+# ---------- Neon techno style ----------
 st.markdown("""
 <style>
-    .stApp { background-color: #0d1117; }
-    [data-testid="stMetricValue"] { font-size: 1.8rem; }
-    .freshness-note {
-        font-size: 0.8rem;
-        color: #8b949e;
-        border-left: 3px solid #30363d;
-        padding-left: 0.6rem;
-        margin-top: -0.5rem;
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap');
+
+    html, body, .stApp {
+        background-color: #080c10 !important;
+        color: #c9d1d9;
+        font-family: 'Inter', sans-serif;
+    }
+
+    h1 {
+        font-family: 'Share Tech Mono', monospace !important;
+        font-size: 2rem !important;
+        color: #00ffe7 !important;
+        text-shadow: 0 0 12px #00ffe7, 0 0 30px #00ffe780;
+        letter-spacing: 0.05em;
+        margin-bottom: 0 !important;
+    }
+
+    h2, h3 {
+        font-family: 'Share Tech Mono', monospace !important;
+        color: #ff2d78 !important;
+        text-shadow: 0 0 8px #ff2d7860;
+        letter-spacing: 0.04em;
+        font-size: 1rem !important;
+        text-transform: uppercase;
+    }
+
+    [data-testid="stMetric"] {
+        background: #0d1520;
+        border: 1px solid #00ffe720;
+        border-radius: 4px;
+        padding: 1rem;
+    }
+    [data-testid="stMetricLabel"] {
+        font-family: 'Share Tech Mono', monospace !important;
+        font-size: 0.7rem !important;
+        color: #8b949e !important;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+    [data-testid="stMetricValue"] {
+        font-family: 'Share Tech Mono', monospace !important;
+        font-size: 1.8rem !important;
+        color: #00ffe7 !important;
+        text-shadow: 0 0 8px #00ffe760;
+    }
+
+    hr { border-color: #1c2940 !important; }
+
+    [data-testid="stExpander"] {
+        background: #0d1520 !important;
+        border: 1px solid #1c2940 !important;
+        border-radius: 4px;
+    }
+
+    .badge-red   { color: #ff2d78; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; }
+    .badge-amber { color: #ffb300; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; }
+    .badge-blue  { color: #00ffe7; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; }
+
+    .freshness-bar {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: #3a4a5c;
+        border-left: 2px solid #00ffe730;
+        padding-left: 0.7rem;
+        margin-bottom: 1rem;
+        letter-spacing: 0.05em;
+    }
+
+    .pill-j {
+        display: inline-block;
+        background: #ff2d78;
+        color: #fff;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+        margin-right: 0.4rem;
+    }
+    .pill-z {
+        display: inline-block;
+        background: #00ffe7;
+        color: #080c10;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+        margin-right: 0.4rem;
+    }
+
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            #00ffe703 2px,
+            #00ffe703 4px
+        );
+        pointer-events: none;
+        z-index: 0;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ---------- Load data ----------
 @st.cache_data(ttl=60)
@@ -38,91 +135,143 @@ def load_features():
         con.close()
         return df
     except Exception as e:
-        st.error(f"Failed to load from warehouse: {e}")
+        st.error(f"Warehouse connection failed: {e}")
         return pd.DataFrame()
 
 df = load_features()
 
 # ---------- Header ----------
-st.title("🚇 J/Z Train Performance Monitor")
-st.caption("How does weather impact subway reliability on the J/Z line?")
+st.markdown("# 🚇 J/Z TRAIN PERFORMANCE")
+st.caption("Real-time reliability vs. weather conditions — NYC MTA")
 
 if df.empty:
-    st.warning(
-        "No feature data found yet. Run the pipeline (`python flow.py`) "
-        "to generate `jz_features.parquet`."
-    )
+    st.warning("No data found. Run `python flow.py` then `dbt run` to populate the warehouse.")
     st.stop()
 
-latest = df.iloc[-1]
-oldest = df["window_start"].min()
+latest = df.iloc[0]
 newest = df["window_start"].max()
 
-# ---------- Freshness / meta info (US-03) ----------
+# ---------- Freshness bar ----------
 st.markdown(
-    f"""<div class="freshness-note">
-    Transit feed: refreshed every ~60s &nbsp;|&nbsp; Weather feed: refreshed hourly &nbsp;|&nbsp;
-    Data joined at a 15-minute window grain &nbsp;|&nbsp;
-    Last updated: {newest.strftime('%Y-%m-%d %H:%M UTC')}
+    f"""<div class="freshness-bar">
+    TRANSIT: ~60s refresh &nbsp;&#9656;&nbsp; WEATHER: hourly &nbsp;&#9656;&nbsp;
+    GRAIN: 15-min window &nbsp;&#9656;&nbsp; LAST RUN: {newest.strftime('%Y-%m-%d %H:%M UTC')}
     </div>""",
     unsafe_allow_html=True,
 )
-st.write("")
 
-# ---------- Current status row ----------
-col1, col2, col3, col4, col5 = st.columns(5)
+# ---------- Status row ----------
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
-    st.metric("Avg delay (latest)", f"{latest['avg_delay_sec']:.0f}s")
+    st.metric("AVG DELAY", f"{latest['avg_delay_sec']:.0f}s")
 with col2:
-    st.metric("Max delay (latest)", f"{latest['max_delay_sec']:.0f}s")
+    st.metric("MAX DELAY", f"{latest['max_delay_sec']:.0f}s")
 with col3:
-    st.metric("Active alerts", f"{int(latest['alerts_active'])}")
+    pct = latest['pct_delayed']
+    st.metric("% DELAYED", f"{pct:.1f}%" if pd.notna(pct) else "—")
 with col4:
-    temp = latest["temperature_c"]
-    st.metric("Temperature", f"{temp:.1f}°C" if pd.notna(temp) else "—")
+    st.metric("ALERTS", f"{int(latest['alerts_active'])}")
 with col5:
+    temp = latest["temperature_c"]
+    heat = " 🔥" if latest.get("is_extreme_heat") else ""
+    st.metric("TEMP", f"{temp:.1f}°C{heat}" if pd.notna(temp) else "—")
+with col6:
     precip = latest["precip_mm"]
-    st.metric("Precipitation", f"{precip:.1f}mm" if pd.notna(precip) else "—")
+    rain = " 🌧" if latest.get("is_precip") else ""
+    st.metric("PRECIP", f"{precip:.1f}mm{rain}" if pd.notna(precip) else "—")
 
 st.divider()
 
-# ---------- Trend charts ----------
+# ---------- Charts ----------
 left, right = st.columns([2, 1])
 
 with left:
-    st.subheader("Delay vs. weather over time")
-    chart_df = df.set_index("window_start")[["avg_delay_sec", "temperature_c"]].dropna(how="all")
-    st.line_chart(chart_df)
+    st.subheader("Delay trend vs. temperature")
+    chart_df = (
+        df.set_index("window_start")[["avg_delay_sec", "temperature_c"]]
+        .dropna(how="all")
+        .sort_index()
+    )
+    st.line_chart(chart_df, color=["#00ffe7", "#ff2d78"])
 
 with right:
-    st.subheader("Delay severity mix")
-    if "delay_records" in df.columns:
-        st.bar_chart(df.set_index("window_start")[["delay_records"]].tail(20))
+    st.subheader("Delay severity breakdown")
+    if all(c in df.columns for c in ["severe_count", "moderate_count", "minor_count"]):
+        sev_df = df[["window_start", "severe_count", "moderate_count", "minor_count"]]\
+            .set_index("window_start").tail(20).sort_index()
+        st.bar_chart(sev_df, color=["#ff2d78", "#ffb300", "#00ffe7"])
     else:
-        st.info("No delay severity breakdown available yet.")
+        st.info("No severity breakdown yet.")
 
 st.divider()
 
-# ---------- Weather threshold callouts (US-01) ----------
-st.subheader("Extreme weather days")
+# ---------- Active alerts ----------
+st.subheader("Service alerts")
+
+alerts_df = df[
+    (df["alerts_active"] > 0) & (df["alert_headers"].notna())
+].drop_duplicates(subset=["alert_headers"])[
+    ["route_id", "window_start", "alerts_active", "worst_severity", "alert_headers"]
+].head(8)
+
+if alerts_df.empty:
+    st.info("No active alerts in current data window.")
+else:
+    severity_map = {
+        "no_service":           ("🔴", "badge-red",   "NO SERVICE"),
+        "significant_delays":   ("🟠", "badge-amber", "SIGNIFICANT DELAYS"),
+        "reduced_service":      ("🟡", "badge-amber", "REDUCED SERVICE"),
+        "unknown_effect":       ("🔵", "badge-blue",  "ADVISORY"),
+    }
+
+    for _, row in alerts_df.iterrows():
+        icon, css, label = severity_map.get(
+            row["worst_severity"], ("⚪", "badge-blue", "INFO")
+        )
+        pill = "pill-j" if row["route_id"] == "J" else "pill-z"
+        route = row["route_id"]
+        header_preview = str(row["alert_headers"])[:90]
+
+        with st.expander(f"{icon}  [{route}]  {header_preview}..."):
+            st.markdown(
+                f'<span class="{pill}">{route}</span>'
+                f'<span class="{css}">[ {label} ]</span>',
+                unsafe_allow_html=True,
+            )
+            st.write(f"**Window:** {row['window_start']}")
+            st.write(f"**Active alerts in window:** {row['alerts_active']}")
+            st.markdown("---")
+            for line in str(row["alert_headers"]).split(" | "):
+                st.markdown(f"&#9658; {line.strip()}")
+
+st.divider()
+
+# ---------- Extreme weather callout ----------
+st.subheader("Extreme heat windows")
 extreme = df[df["is_extreme_heat"] == True]
 if extreme.empty:
-    st.info("No extreme heat (≥90°F / 32.2°C) windows recorded yet.")
+    st.info("No extreme heat windows (>=32.2C / 90F) recorded yet.")
 else:
     st.dataframe(
-        extreme[["window_start", "avg_delay_sec", "temperature_c", "alerts_active"]],
+        extreme[[
+            "window_start", "route_id", "avg_delay_sec",
+            "temperature_c", "alerts_active", "pct_delayed"
+        ]],
         use_container_width=True,
     )
 
 st.divider()
 
-# ---------- Raw feature table ----------
-with st.expander("View raw feature table"):
+# ---------- Raw table ----------
+with st.expander("Raw feature table"):
     st.dataframe(df, use_container_width=True)
 
-# ---------- Disclaimer ----------
-st.caption(
-    "Occupancy is not directly reported by MTA and is approximated from headway gaps "
-    "between trains. Weather data sourced from Open-Meteo; transit data from MTA GTFS-RT."
+# ---------- Footer ----------
+st.markdown(
+    """<div class="freshness-bar" style="margin-top:2rem">
+    Occupancy approximated from headway gaps — MTA does not publish per-train occupancy.
+    &nbsp;&#9656;&nbsp; Weather: Open-Meteo &nbsp;&#9656;&nbsp; Transit: MTA GTFS-RT
+    </div>""",
+    unsafe_allow_html=True,
 )
