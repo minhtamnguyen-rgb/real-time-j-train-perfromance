@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: stg_delays
+    description: "Cleaned J/Z trip update delay records per stop per trip, deduped by source file."
+    columns:
+      - name: vehicle_id
+        description: "MTA vehicle identifier"
+        tests:
+          - not_null
+      - name: trip_id
+        description: "Unique trip identifier"
+        tests:
+          - not_null
+      - name: route_id
+        description: "J or Z"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['J', 'Z']
+      - name: stop_id
+        description: "Station code e.g. J15N"
+        tests:
+          - not_null
+      - name: arrival_delay
+        description: "Arrival delay in seconds, 0 if on time"
+        tests:
+          - not_null
+      - name: delay_severity
+        description: "on_time / minor / moderate / severe"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['on_time', 'minor', 'moderate', 'severe']
+      - name: window_start
+        description: "15-minute window start timestamp (UTC)"
+        tests:
+          - not_null
+
+  - name: stg_alerts
+    description: "Active service alerts affecting J/Z, unnested by route, deduped by alert_id."
+    columns:
+      - name: alert_id
+        description: "MTA alert identifier"
+        tests:
+          - not_null
+      - name: route_id
+        description: "J or Z"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['J', 'Z']
+      - name: severity
+        description: "GTFS-RT effect mapped to readable label"
+        tests:
+          - not_null
+      - name: window_start
+        description: "15-minute window start timestamp (UTC)"
+        tests:
+          - not_null
+
+  - name: stg_positions
+    description: "Vehicle positions with derived headway gaps and occupancy proxy, capped at 30 min."
+    columns:
+      - name: vehicle_id
+        description: "MTA vehicle identifier"
+        tests:
+          - not_null
+      - name: route_id
+        description: "J or Z"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['J', 'Z']
+      - name: occupancy_proxy
+        description: "bunched / normal / sparse / unknown"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['bunched', 'normal', 'sparse', 'unknown']
+      - name: window_start
+        description: "15-minute window start timestamp (UTC)"
+        tests:
+          - not_null
+
+  - name: stg_weather
+    description: "Deduplicated hourly weather observations for NYC, one row per obs_hour."
+    columns:
+      - name: obs_hour
+        description: "Observation hour (UTC), join key to transit data"
+        tests:
+          - not_null
+          - unique
+      - name: temperature_c
+        description: "Temperature in Celsius"
+        tests:
+          - not_null
+      - name: humidity_pct
+        description: "Relative humidity percentage"
+        tests:
+          - not_null

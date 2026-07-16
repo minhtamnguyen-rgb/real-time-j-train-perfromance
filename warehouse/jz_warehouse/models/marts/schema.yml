@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: fct_jz_performance
+    description: "Core fact table — one row per J/Z route per 15-minute window with delay, alert, headway, and weather metrics joined."
+    columns:
+      - name: route_id
+        description: "J or Z"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['J', 'Z']
+      - name: window_start
+        description: "Start of 15-minute aggregation window (UTC)"
+        tests:
+          - not_null
+      - name: avg_delay_sec
+        description: "Mean arrival delay across all stops in window"
+        tests:
+          - not_null
+      - name: alerts_active
+        description: "Count of distinct active alerts in window"
+        tests:
+          - not_null
+      - name: pct_delayed
+        description: "Percentage of records with moderate or severe delay"
