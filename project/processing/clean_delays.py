@@ -69,10 +69,17 @@ def classify_delay(seconds):
 def save_processed(df, output_dir="project/data/processed/delays"):
     os.makedirs(output_dir, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    path = f"{output_dir}/delays_{ts}.parquet"
-    df.to_parquet(path, index=False)
-    print(f"Saved: {path}")
-    return path
+    final_path = f"{output_dir}/delays_{ts}.parquet"
+    tmp_path = f"{final_path}.tmp"
+    try:
+        df.to_parquet(tmp_path, index=False)
+        os.rename(tmp_path, final_path)
+    except Exception as e:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise e
+    print(f"Saved: {final_path}")
+    return final_path
 
 def main():
     df_raw = load_raw_delays()

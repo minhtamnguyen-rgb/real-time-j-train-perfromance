@@ -40,6 +40,35 @@ def run_processing():
 def run_feature_join():
     run_script.fn("project/features/jz_weather_correlation.py")
 
+@task(retries=1, retry_delay_seconds=10)
+def run_dbt():
+    result = subprocess.run(
+        [
+            "/workspaces/real-time-j-train-perfromance/warehouse/.venv/bin/dbt",
+            "run",
+            "--project-dir",
+            "/workspaces/real-time-j-train-perfromance/warehouse/jz_warehouse",
+            "--profiles-dir",
+            "/home/codespace/.dbt",
+        ],
+        capture_output=True,
+        text=True,
+        cwd="/workspaces/real-time-j-train-perfromance/warehouse/jz_warehouse"
+    )
+    if result.stdout:
+        print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+        raise RuntimeError(f"dbt run failed with code {result.returncode}")
+    print("OK: dbt run")
+
+@flow(name="jz-pipeline")
+def jz_pipeline():
+    run_ingestion()
+    run_processing()
+    run_feature_join()
+    run_dbt()
+    
 @flow(name="jz-pipeline")
 def jz_pipeline():
     run_ingestion()
