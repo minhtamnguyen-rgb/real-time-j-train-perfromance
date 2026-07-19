@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: raw_delays
+    description: "Raw J/Z trip update delay records from MTA GTFS-RT"
+    tables:
+      - name: trip_updates
+        description: "Decoded protobuf trip updates, one row per stop per trip"
+        external_location: "project/data/processed/delays/*.parquet"
+
+  - name: raw_alerts
+    description: "Raw J/Z service alerts from MTA GTFS-RT"
+    tables:
+      - name: alerts
+        description: "Decoded protobuf alerts, one row per alert per raw file"
+        external_location: "project/data/processed/alerts/*.parquet"
+
+  - name: raw_weather
+    description: "Hourly weather observations from Open-Meteo for NYC"
+    tables:
+      - name: weather
+        description: "One row per poll, deduplicated to one per hour in stg_weather"
+        external_location: "project/data/processed/weather/*.parquet"
+
+  - name: raw_positions
+    description: "Raw J/Z vehicle positions from MTA GTFS-RT"
+    tables:
+      - name: vehicle_positions
+        description: "Decoded protobuf vehicle positions with derived headway gaps"
+        external_location: "project/data/processed/vehicle_positions/*.parquet"

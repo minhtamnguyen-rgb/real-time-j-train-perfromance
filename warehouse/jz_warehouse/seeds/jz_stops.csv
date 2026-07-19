@@ -1,0 +1,65 @@
+stop_id,stop_name,line,direction
+G05N,Court Sq,J/Z,Northbound
+G05S,Court Sq,J/Z,Southbound
+G06N,Hunters Point Av,J/Z,Northbound
+G06S,Hunters Point Av,J/Z,Southbound
+J12N,Crescent St,J,Northbound
+J12S,Crescent St,J,Southbound
+J13N,Norwood Av,J,Northbound
+J13S,Norwood Av,J,Southbound
+J14N,Cleveland St,J,Northbound
+J14S,Cleveland St,J,Southbound
+J15N,Van Siclen Av,J,Northbound
+J15S,Van Siclen Av,J,Southbound
+J16N,Alabama Av,J,Northbound
+J16S,Alabama Av,J,Southbound
+J17N,Broadway Junction,J,Northbound
+J17S,Broadway Junction,J,Southbound
+J19N,Halsey St,J,Northbound
+J19S,Halsey St,J,Southbound
+J20N,Gates Av,J,Northbound
+J20S,Gates Av,J,Southbound
+J21N,Kosciuszko St,J,Northbound
+J21S,Kosciuszko St,J,Southbound
+J22N,Myrtle Av,J,Northbound
+J22S,Myrtle Av,J,Southbound
+J23N,Flushing Av,J,Northbound
+J23S,Flushing Av,J,Southbound
+J24N,Lorimer St,J,Northbound
+J24S,Lorimer St,J,Southbound
+J27N,Hewes St,J,Northbound
+J27S,Hewes St,J,Southbound
+J28N,Marcy Av,J,Northbound
+J28S,Marcy Av,J,Southbound
+J29N,Essex St,J,Northbound
+J29S,Essex St,J,Southbound
+J30N,Delancey St,J,Northbound
+J30S,Delancey St,J,Southbound
+J31N,Bowery,J,Northbound
+J31S,Bowery,J,Southbound
+M11S,Jamaica Center-Parsons/Archer,J/Z,Southbound
+M11N,Jamaica Center-Parsons/Archer,J/Z,Northbound
+M12N,Sutphin Blvd-Archer Av,J/Z,Northbound
+M12S,Sutphin Blvd-Archer Av,J/Z,Southbound
+M13N,Jamaica-Van Wyck,J/Z,Northbound
+M13S,Jamaica-Van Wyck,J/Z,Southbound
+M14N,Parsons Blvd,J/Z,Northbound
+M14S,Parsons Blvd,J/Z,Southbound
+M15N,Sutphin Blvd,J/Z,Northbound
+M15S,Sutphin Blvd,J/Z,Southbound
+M16N,Briarwood,J/Z,Northbound
+M16S,Briarwood,J/Z,Southbound
+M17N,Kew Gardens-Union Tpke,J/Z,Northbound
+M17S,Kew Gardens-Union Tpke,J/Z,Southbound
+M18N,75 Av,J/Z,Northbound
+M18S,75 Av,J/Z,Southbound
+M19N,Forest Hills-71 Av,J/Z,Northbound
+M19S,Forest Hills-71 Av,J/Z,Southbound
+M20N,Woodhaven Blvd,J/Z,Northbound
+M20S,Woodhaven Blvd,J/Z,Southbound
+M21N,85 St-Forest Pkwy,J/Z,Northbound
+M21S,85 St-Forest Pkwy,J/Z,Southbound
+M22N,Woodhaven Blvd,J/Z,Northbound
+M22S,Woodhaven Blvd,J/Z,Southbound
+M23N,Cypress Hills,J/Z,Northbound
+M23S,Cypress Hills,J/Z,Southbound
