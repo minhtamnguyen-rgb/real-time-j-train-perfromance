@@ -207,46 +207,66 @@ with right:
 st.divider()
 
 # ---------- Active alerts ----------
-st.subheader("Service alerts")
+# ---------- Alerts ----------
+con = duckdb.connect("warehouse/dev.duckdb", read_only=True)
 
-alerts_df = df[
-    (df["alerts_active"] > 0) & (df["alert_headers"].notna())
-].drop_duplicates(subset=["alert_headers"])[
-    ["route_id", "window_start", "alerts_active", "worst_severity", "alert_headers"]
-].head(8)
+ongoing = con.execute("""
+    SELECT route_id, header, hours_since_start
+    FROM dim_alerts_active
+    WHERE alert_status = 'ongoing'
+    ORDER BY hours_since_start DESC
+""").fetchdf()
 
-if alerts_df.empty:
-    st.info("No active alerts in current data window.")
+upcoming = con.execute("""
+    SELECT route_id, header, hours_until_start, start_time, end_time
+    FROM dim_alerts_active
+    WHERE alert_status = 'upcoming'
+    ORDER BY hours_until_start ASC
+""").fetchdf()
+
+con.close()
+
+# Ongoing disruptions
+st.subheader("Ongoing disruptions")
+if ongoing.empty:
+    st.info("No active disruptions.")
 else:
-    severity_map = {
-        "no_service":           ("🔴", "badge-red",   "NO SERVICE"),
-        "significant_delays":   ("🟠", "badge-amber", "SIGNIFICANT DELAYS"),
-        "reduced_service":      ("🟡", "badge-amber", "REDUCED SERVICE"),
-        "unknown_effect":       ("🔵", "badge-blue",  "ADVISORY"),
-    }
-
-    for _, row in alerts_df.iterrows():
-        icon, css, label = severity_map.get(
-            row["worst_severity"], ("⚪", "badge-blue", "INFO")
-        )
+    for _, row in ongoing.iterrows():
         pill = "pill-j" if row["route_id"] == "J" else "pill-z"
-        route = row["route_id"]
-        header_preview = str(row["alert_headers"])[:90]
-
-        with st.expander(f"{icon}  [{route}]  {header_preview}..."):
+        days = int(row["hours_since_start"] // 24)
+        hours = int(row["hours_since_start"] % 24)
+        duration = f"{days}d {hours}h" if days > 0 else f"{hours}h"
+        with st.expander(f"🔴  [{row['route_id']}]  {str(row['header'])[:80]}..."):
             st.markdown(
-                f'<span class="{pill}">{route}</span>'
-                f'<span class="{css}">[ {label} ]</span>',
+                f'<span class="{pill}">{row["route_id"]}</span>'
+                f'<span class="badge-red">[ ONGOING — {duration} ]</span>',
                 unsafe_allow_html=True,
             )
-            st.write(f"**Window:** {row['window_start']}")
-            st.write(f"**Active alerts in window:** {row['alerts_active']}")
-            st.markdown("---")
-            for line in str(row["alert_headers"]).split(" | "):
-                st.markdown(f"&#9658; {line.strip()}")
+            st.write(row["header"])
 
-st.divider()
+st.write("")
 
+# Upcoming planned work
+st.subheader("Upcoming planned work")
+if upcoming.empty:
+    st.info("No planned work scheduled.")
+else:
+    for _, row in upcoming.iterrows():
+        pill = "pill-j" if row["route_id"] == "J" else "pill-z"
+        hours = int(row["hours_until_start"])
+        days = hours // 24
+        eta = f"in {days}d {hours % 24}h" if days > 0 else f"in {hours}h"
+        start = pd.to_datetime(row["start_time"]).strftime("%b %d %H:%M UTC")
+        end = pd.to_datetime(row["end_time"]).strftime("%b %d %H:%M UTC") if pd.notna(row["end_time"]) else "TBD"
+        with st.expander(f"🟡  [{row['route_id']}]  {str(row['header'])[:80]}..."):
+            st.markdown(
+                f'<span class="{pill}">{row["route_id"]}</span>'
+                f'<span class="badge-amber">[ PLANNED — starts {eta} ]</span>',
+                unsafe_allow_html=True,
+            )
+            st.write(f"**From:** {start}")
+            st.write(f"**Until:** {end}")
+            st.write(row["header"])
 # ---------- Extreme weather callout ----------
 st.subheader("Extreme heat windows")
 extreme = df[df["is_extreme_heat"] == True]

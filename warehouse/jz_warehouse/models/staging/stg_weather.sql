@@ -14,13 +14,12 @@ deduped as (
         wind_speed_kmh,
         weather_timestamp,
         obs_hour,
-        window_start,
         is_extreme_heat,
         is_precip,
         is_snow,
         row_number() over (
             partition by obs_hour
-            order by event_time desc
+            order by weather_timestamp desc    -- use Open-Meteo's own timestamp
         )                               as rn
     from processed
 )
