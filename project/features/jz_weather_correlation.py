@@ -27,6 +27,7 @@ def build_features(
             route_id,
             window_start,
             COUNT(DISTINCT alert_id) AS alerts_active
+            
         FROM (
             SELECT unnest(route_ids) AS route_id, window_start, alert_id
             FROM read_parquet('{alerts_dir}/*.parquet')

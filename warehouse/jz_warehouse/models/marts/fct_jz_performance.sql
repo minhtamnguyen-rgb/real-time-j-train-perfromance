@@ -1,18 +1,22 @@
 {{ config(materialized='table') }}
 
-with delays as (
-    select
+with delays AS (
+    SELECT
         route_id,
         window_start,
-        avg(arrival_delay)          as avg_delay_sec,
-        max(arrival_delay)          as max_delay_sec,
-        count(*)                    as delay_records,
-        count(case when delay_severity = 'severe'   then 1 end) as severe_count,
-        count(case when delay_severity = 'moderate' then 1 end) as moderate_count,
-        count(case when delay_severity = 'minor'    then 1 end) as minor_count,
-        count(case when delay_severity = 'on_time'  then 1 end) as on_time_count
-    from {{ ref('stg_delays') }}
-    group by route_id, window_start
+        AVG(arrival_delay)          AS avg_delay_sec,
+        MAX(arrival_delay)          AS max_delay_sec,
+        COUNT(*)                    AS delay_records,
+        COUNT(CASE WHEN delay_severity = 'severe'   THEN 1 END) AS severe_count,
+        COUNT(CASE WHEN delay_severity = 'moderate' THEN 1 END) AS moderate_count,
+        COUNT(CASE WHEN delay_severity = 'minor'    THEN 1 END) AS minor_count,
+        COUNT(CASE WHEN delay_severity = 'on_time'  THEN 1 END) AS on_time_count,
+
+        -- most delayed stop in this window
+        arg_max(stop_name, arrival_delay)   AS worst_stop_name,
+        arg_max(stop_id, arrival_delay)     AS worst_stop_id
+    FROM {{ ref('stg_delays') }}
+    GROUP BY route_id, window_start
 ),
 
 alerts as (
@@ -55,6 +59,8 @@ weather as (
 select
     d.route_id,
     d.window_start,
+    d.worst_stop_name,
+    d.worst_stop_id,
 
     -- delay metrics
     d.avg_delay_sec,

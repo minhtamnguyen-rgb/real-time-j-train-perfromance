@@ -68,6 +68,12 @@ def save_processed(df, output_dir="project/data/processed/weather"):
     tmp_path = f"{final_path}.tmp"
     try:
         df.to_parquet(tmp_path, index=False)
+        import duckdb
+        con = duckdb.connect()
+        count = con.execute(f"SELECT COUNT(*) FROM read_parquet('{tmp_path}')").fetchone()[0]
+        con.close()
+        if count != len(df):
+            raise ValueError(f"Validation failed: wrote {len(df)} rows but parquet has {count}")
         os.rename(tmp_path, final_path)
     except Exception as e:
         if os.path.exists(tmp_path):
