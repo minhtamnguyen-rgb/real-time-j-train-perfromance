@@ -10,13 +10,20 @@ with delays AS (
         COUNT(CASE WHEN delay_severity = 'severe'   THEN 1 END) AS severe_count,
         COUNT(CASE WHEN delay_severity = 'moderate' THEN 1 END) AS moderate_count,
         COUNT(CASE WHEN delay_severity = 'minor'    THEN 1 END) AS minor_count,
-        COUNT(CASE WHEN delay_severity = 'on_time'  THEN 1 END) AS on_time_count,
-
-        -- most delayed stop in this window
-        arg_max(stop_name, arrival_delay)   AS worst_stop_name,
-        arg_max(stop_id, arrival_delay)     AS worst_stop_id
+        COUNT(CASE WHEN delay_severity = 'on_time'  THEN 1 END) AS on_time_count
     FROM {{ ref('stg_delays') }}
     GROUP BY route_id, window_start
+),
+
+worst_stop as (
+    SELECT DISTINCT ON (route_id, window_start)
+        route_id,
+        window_start,
+        stop_id     AS worst_stop_id,
+        stop_name   AS worst_stop_name
+    FROM {{ ref('stg_delays') }}
+    WHERE arrival_delay IS NOT NULL
+    ORDER BY route_id, window_start, arrival_delay DESC
 ),
 
 alerts as (
@@ -59,10 +66,8 @@ weather as (
 select
     d.route_id,
     d.window_start,
-    d.worst_stop_name,
-    d.worst_stop_id,
-
-    -- delay metrics
+    ws.worst_stop_name,
+    ws.worst_stop_id,
     d.avg_delay_sec,
     d.max_delay_sec,
     d.delay_records,
@@ -70,25 +75,17 @@ select
     d.moderate_count,
     d.minor_count,
     d.on_time_count,
-
-    -- delay rate (normalized by total records)
     round(
         cast(d.severe_count + d.moderate_count as double) / nullif(d.delay_records, 0) * 100,
         2
     )                               as pct_delayed,
-
-    -- alerts
     coalesce(a.alerts_active, 0)    as alerts_active,
     a.worst_severity,
     a.alert_headers,
-
-    -- headway / occupancy proxy
     p.avg_headway_gap_sec,
     p.max_headway_gap_sec,
     p.bunched_count,
     p.sparse_count,
-
-    -- weather
     w.temperature_c,
     w.humidity_pct,
     w.precip_mm,
@@ -97,11 +94,11 @@ select
     w.is_extreme_heat,
     w.is_precip,
     w.is_snow,
-
-    -- metadata
-    current_timestamp               as dbt_updated_at
-
+    current_timestamp as dbt_updated_at
 from delays d
+left join worst_stop ws
+    on  d.route_id     = ws.route_id
+    and d.window_start = ws.window_start
 left join alerts a
     on  d.route_id     = a.route_id
     and d.window_start = a.window_start
