@@ -60,10 +60,16 @@ def main():
     data = fetch_weather()
     raw_path = save_raw(data)
     records = extract_hourly(data)
+    precip_hours = sum(1 for r in records if r["precip_mm"] > 0)
     print(f"Saved: {raw_path}")
-    print(f"Hourly records: {len(records)}")
-    for r in records[-3:]:  # show last 3 hours
+    print(f"Hourly records: {len(records)}, hours with precipitation: {precip_hours}")
+    for r in records[-3:]:
         print(r)
+
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(raw_path, raw_path.replace("project/", ""))
 
 if __name__ == "__main__":
     main()

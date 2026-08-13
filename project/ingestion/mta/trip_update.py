@@ -84,8 +84,15 @@ def main():
     content = fetch_feed()
     raw_path = save_raw(content)
     feed = parse_feed(content)
+    records = extract_jz(feed)
     print(f"Saved: {raw_path}")
     print(f"Entities in feed: {len(feed.entity)}")
+    print(f"J/Z records: {len(records)}")
+
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(raw_path, raw_path.replace("project/", ""))
 
 
 # In[88]:
@@ -93,20 +100,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# In[89]:
-
-
-content = fetch_feed()
-feed = parse_feed(content)
-records = extract_jz(feed)
-for r in records[:5]:
-    print(r)
-
-
-# In[ ]:
-
-
 
 

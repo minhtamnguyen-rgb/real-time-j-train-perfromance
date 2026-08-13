@@ -85,6 +85,11 @@ def main():
     for r in records[:5]:
         print(r)
 
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(raw_path, raw_path.replace("project/", ""))
+
 if __name__ == "__main__":
     main()
 

@@ -101,6 +101,10 @@ def main():
     for r in records[:3]:
         print(r)
 
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(raw_path, raw_path.replace("project/", ""))
 
 # In[16]:
 
