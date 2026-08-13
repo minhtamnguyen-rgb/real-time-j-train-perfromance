@@ -101,14 +101,20 @@ def saved_features(df, output_dir="project/data/features/jz_combined"):
 def main():
     print(f"Building features at {datetime.now(timezone.utc).isoformat()}")
     df = build_features()
+
     if df.empty:
         print("No feature data produced - check that processed parquet files exist")
         return
-    
+
     print(f"Feature rows: {len(df)}")
     print(df[["route_id", "window_start", "avg_delay_sec", "alerts_active", "temperature_c", "is_extreme_heat"]].head(10))
     path = saved_features(df)
     print(f"Done: {path}")
+
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(path, path.replace("project/", ""))
 
 if __name__ == "__main__":
     main()

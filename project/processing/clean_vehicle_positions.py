@@ -111,6 +111,10 @@ def main():
     print(df_clean[["route_id", "stop_id", "headway_gap_sec", "headway_status", "window_start"]].head(10))
     path = save_processed(df_clean)
     print(f"Done: {path}")
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(path, path.replace("project/", ""))
 
 if __name__ == "__main__":
     main()

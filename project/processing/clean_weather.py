@@ -94,6 +94,10 @@ def main():
     print(df_clean[["temperature_c", "humidity_pct", "precip_mm", "is_extreme_heat", "obs_hour"]].head())
     path = save_processed(df_clean)
     print(f"Done: {path}")
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(path, path.replace("project/", ""))
 
 if __name__ == "__main__":
     main()

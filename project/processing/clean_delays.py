@@ -100,5 +100,10 @@ def main():
     path = save_processed(df_clean)
     print(f"Done: {path}")
 
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import upload_file
+    upload_file(path, path.replace("project/", ""))
+
 if __name__ == "__main__":
     main()
