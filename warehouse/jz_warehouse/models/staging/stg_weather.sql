@@ -2,7 +2,7 @@
 
 with processed as (
     select *
-    from read_parquet('/workspaces/real-time-j-train-perfromance/project/data/processed/weather/*.parquet')
+    from read_parquet('s3://jz-pipeline/data/processed/weather/*.parquet')
 ),
 
 deduped as (
@@ -19,7 +19,7 @@ deduped as (
         is_snow,
         row_number() over (
             partition by obs_hour
-            order by weather_timestamp desc    -- use Open-Meteo's own timestamp
+            order by weather_timestamp desc
         )                               as rn
     from processed
 )

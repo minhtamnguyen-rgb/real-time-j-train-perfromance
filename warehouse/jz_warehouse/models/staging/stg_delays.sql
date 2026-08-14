@@ -2,7 +2,7 @@
 
 with processed as (
     select *
-    from read_parquet('/workspaces/real-time-j-train-perfromance/project/data/processed/delays/*.parquet')
+    from read_parquet('s3://jz-pipeline/data/processed/delays/*.parquet')
 ),
 
 stops as (

@@ -2,7 +2,7 @@
 
 with processed as (
     select *
-    from read_parquet('/workspaces/real-time-j-train-perfromance/project/data/processed/vehicle_positions/*.parquet')
+    from read_parquet('s3://jz-pipeline/data/processed/vehicle_positions/*.parquet')
 ),
 
 deduped as (
@@ -23,7 +23,7 @@ deduped as (
         )                               as rn
     from processed
     where route_id in ('J', 'Z')
-      and (headway_gap_sec is null or headway_gap_sec <= 1800)  -- cap outliers
+      and (headway_gap_sec is null or headway_gap_sec <= 1800)
 ),
 
 with_occupancy_proxy as (
@@ -38,8 +38,6 @@ with_occupancy_proxy as (
         headway_gap_sec,
         headway_status,
         window_start,
-
-        -- occupancy proxy label based on headway
         case
             when headway_gap_sec is null        then 'unknown'
             when headway_gap_sec <= 300         then 'bunched'

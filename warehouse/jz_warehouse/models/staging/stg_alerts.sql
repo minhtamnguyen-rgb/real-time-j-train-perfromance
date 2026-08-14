@@ -2,7 +2,7 @@
 
 with processed as (
     select *
-    from read_parquet('/workspaces/real-time-j-train-perfromance/project/data/processed/alerts/*.parquet')
+    from read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
 ),
 
 unnested as (
