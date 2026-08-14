@@ -5,6 +5,11 @@ import glob
 from google.transit import gtfs_realtime_pb2
 
 def load_raw_positions(raw_dir="project/data/raw/mta/vehicle_positions"):
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import sync_from_r2
+    sync_from_r2("data/raw/mta/vehicle_positions/", raw_dir)
+
     files = glob.glob(f"{raw_dir}/**/*.pb", recursive=True)
     if not files:
         print("No raw vehicle position files found")

@@ -5,7 +5,14 @@ import glob
 from google.transit import gtfs_realtime_pb2
 
 def load_raw_delays(raw_dir="project/data/raw/mta/trip_updates"):
+    # sync from R2 first
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import sync_from_r2
+    sync_from_r2("data/raw/mta/trip_updates/", raw_dir)
+
     files = glob.glob(f"{raw_dir}/**/*.pb", recursive=True)
+
     if not files:
         print("No raw trip update files found")
         return pd.DataFrame()

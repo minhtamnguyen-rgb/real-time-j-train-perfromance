@@ -12,6 +12,11 @@ EFFECT_LABELS = {
 }
 
 def load_raw_alerts(raw_dir="project/data/raw/mta/alerts"):
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import sync_from_r2
+    sync_from_r2("data/raw/mta/alerts/", raw_dir)
+
     files = glob.glob(f"{raw_dir}/**/*.pb", recursive=True)
     if not files:
         print("No raw alert files found")

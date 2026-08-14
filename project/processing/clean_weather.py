@@ -5,6 +5,11 @@ import os
 import glob
 
 def load_raw_weather(raw_dir="project/data/raw/weather"):
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import sync_from_r2
+    sync_from_r2("data/raw/weather/", raw_dir)
+
     files = glob.glob(f"{raw_dir}/**/*.json", recursive=True)
     if not files:
         print("No raw weather files found")

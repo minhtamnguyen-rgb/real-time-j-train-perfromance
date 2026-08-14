@@ -9,6 +9,15 @@ def build_features(
     positions_dir="project/data/processed/vehicle_positions",
     output_dir="project/data/features/jz_combined"
 ):
+    # sync processed files from R2 first
+    import sys
+    sys.path.insert(0, '.')
+    from project.storage import sync_from_r2
+    sync_from_r2("data/processed/delays/", delays_dir)
+    sync_from_r2("data/processed/alerts/", alerts_dir)
+    sync_from_r2("data/processed/weather/", weather_dir)
+    sync_from_r2("data/processed/vehicle_positions/", positions_dir)
+
     con = duckdb.connect()
 
     query = f"""
