@@ -43,6 +43,15 @@ def run_dbt():
 
 def main():
     print(f"Pipeline started at {datetime.now(timezone.utc).isoformat()}")
+    
+    # debug env vars
+    import os
+    print(f"R2_ACCESS_KEY_ID present: {'R2_ACCESS_KEY_ID' in os.environ}")
+    print(f"R2_BUCKET_NAME: {os.environ.get('R2_BUCKET_NAME', 'NOT SET')}")
+    print(f"Total env vars: {len(os.environ)}")
+    
+    errors = []
+    ...
     errors = []
     for script in SCRIPTS:
         code = run_script(script)
