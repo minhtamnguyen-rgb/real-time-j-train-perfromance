@@ -2,4 +2,5 @@ requests
 gtfs-realtime-bindings
 pandas
 pyarrow
-duckdb
+duckdbboto3
+python-dotenv
