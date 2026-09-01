@@ -106,5 +106,5 @@ left join positions p
     on  d.route_id     = p.route_id
     and d.window_start = p.window_start
 left join weather w
-    on date_trunc('hour', d.window_start) = w.obs_hour
+    on date_trunc('hour', d.window_start::TIMESTAMP) = w.obs_hour
 order by d.window_start desc

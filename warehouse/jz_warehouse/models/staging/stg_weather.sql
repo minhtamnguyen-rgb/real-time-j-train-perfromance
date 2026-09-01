@@ -13,7 +13,7 @@ deduped as (
         snowfall_cm,
         wind_speed_kmh,
         weather_timestamp,
-        obs_hour,
+        date_trunc('hour', weather_timestamp::TIMESTAMPTZ)  as obs_hour,
         is_extreme_heat,
         is_precip,
         is_snow,
