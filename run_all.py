@@ -22,6 +22,26 @@ def run_script(path):
 
 def run_dbt():
     print(f"\n[{datetime.now(timezone.utc).isoformat()}] Running dbt")
+    
+    # run seed first
+    seed_result = subprocess.run(
+        [
+            "/app/warehouse/.venv/bin/dbt",
+            "seed",
+            "--project-dir", "/app/warehouse/jz_warehouse",
+            "--profiles-dir", "/root/.dbt",
+        ],
+        capture_output=True,
+        text=True,
+        cwd="/app/warehouse/jz_warehouse"
+    )
+    if seed_result.stdout:
+        print(seed_result.stdout)
+    if seed_result.returncode != 0:
+        print(f"ERROR in dbt seed:\n{seed_result.stderr}")
+        return seed_result.returncode
+
+    # then run models
     result = subprocess.run(
         [
             "/app/warehouse/.venv/bin/dbt",
