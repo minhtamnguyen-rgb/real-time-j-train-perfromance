@@ -1,0 +1,12 @@
+jz_warehouse:
+  outputs:
+    dev:
+      type: duckdb
+      path: /app/warehouse/dev.duckdb
+      threads: 4
+      settings:
+        s3_access_key_id: "{{ env_var('R2_ACCESS_KEY_ID') }}"
+        s3_secret_access_key: "{{ env_var('R2_SECRET_ACCESS_KEY') }}"
+        s3_endpoint: "{{ env_var('R2_ENDPOINT_HOSTNAME') }}"
+        s3_url_style: path
+  target: dev

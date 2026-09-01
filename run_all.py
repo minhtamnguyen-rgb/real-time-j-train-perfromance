@@ -27,7 +27,7 @@ def run_dbt():
             "/app/warehouse/.venv/bin/dbt",
             "run",
             "--project-dir", "/app/warehouse/jz_warehouse",
-            "--profiles-dir", "/app/warehouse",
+            "--profiles-dir", "/root/.dbt",
         ],
         capture_output=True,
         text=True,
