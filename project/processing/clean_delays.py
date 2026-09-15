@@ -5,7 +5,6 @@ import glob
 from google.transit import gtfs_realtime_pb2
 
 def load_raw_delays(raw_dir="project/data/raw/mta/trip_updates"):
-    # sync from R2 first
     import sys
     sys.path.insert(0, '.')
     from project.storage import sync_from_r2
@@ -27,6 +26,11 @@ def load_raw_delays(raw_dir="project/data/raw/mta/trip_updates"):
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(content)
 
+        # use feed's own timestamp instead of datetime.now()
+        feed_time = datetime.fromtimestamp(
+            feed.header.timestamp, tz=timezone.utc
+        ).isoformat()
+
         for entity in feed.entity:
             if not entity.HasField("trip_update"):
                 continue
@@ -42,7 +46,7 @@ def load_raw_delays(raw_dir="project/data/raw/mta/trip_updates"):
                     "arrival_delay": stu.arrival.delay if stu.HasField("arrival") else None,
                     "departure_delay": stu.departure.delay if stu.HasField("departure") else None,
                     "source_file": file_path,
-                    "event_time": datetime.now(timezone.utc).isoformat()
+                    "event_time": feed_time
                 })
 
     return pd.DataFrame(all_records)
@@ -58,7 +62,6 @@ def clean_delays(df):
     df["event_time"] = pd.to_datetime(df["event_time"], utc=True, format='ISO8601')
     df["window_start"] = df["event_time"].dt.floor("15min")
 
-    # drop exact duplicate rows in case the same .pb is processed more than once
     df = df.drop_duplicates(subset=["vehicle_id", "trip_id", "stop_id", "source_file"])
 
     return df

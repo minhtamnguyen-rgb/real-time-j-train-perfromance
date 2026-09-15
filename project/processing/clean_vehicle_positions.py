@@ -24,7 +24,7 @@ def load_raw_positions(raw_dir="project/data/raw/mta/vehicle_positions"):
 
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(content)
-
+        feed_time = datetime.fromtimestamp(feed.header.timestamp, tz=timezone.utc).isoformat()
         for entity in feed.entity:
             if not entity.HasField("vehicle"):
                 continue
@@ -41,7 +41,7 @@ def load_raw_positions(raw_dir="project/data/raw/mta/vehicle_positions"):
                 "occupancy_status": v.occupancy_status if v.HasField("occupancy_status") else None,
                 "mta_timestamp": v.timestamp,
                 "source_file": file_path,
-                "event_time": datetime.now(timezone.utc).isoformat()
+                "event_time": feed_time
             })
 
     return pd.DataFrame(all_records)

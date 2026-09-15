@@ -57,7 +57,10 @@ def clean_weather(df):
     df["weather_timestamp"] = pd.to_datetime(df["weather_timestamp"])
     df["event_time"] = pd.to_datetime(df["event_time"], utc=True, format='ISO8601')
     df["window_start"] = df["event_time"].dt.floor("15min")
-    df["obs_hour"] = df["weather_timestamp"].dt.floor("h")
+    
+    # force obs_hour to UTC timezone-aware
+    df["obs_hour"] = pd.to_datetime(df["weather_timestamp"]).dt.floor("h").dt.tz_localize("UTC")
+    
     df["is_extreme_heat"] = df["temperature_c"] >= 32.2
     df["is_precip"] = df["precip_mm"] > 0
     df["is_snow"] = df["snowfall_cm"] > 0

@@ -28,9 +28,9 @@ def load_raw_alerts(raw_dir="project/data/raw/mta/alerts"):
     for file_path in files:
         with open(file_path, "rb") as f:
             content = f.read()
-
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(content)
+        feed_time = datetime.fromtimestamp(feed.header.timestamp, tz=timezone.utc).isoformat()
 
         for entity in feed.entity:
             if not entity.HasField("alert"):
@@ -54,7 +54,7 @@ def load_raw_alerts(raw_dir="project/data/raw/mta/alerts"):
                 "start_time": alert.active_period[0].start if alert.active_period else None,
                 "end_time": alert.active_period[0].end if alert.active_period and alert.active_period[0].HasField("end") else None,
                 "source_file": file_path,
-                "event_time": datetime.now(timezone.utc).isoformat()
+                "event_time": feed_time
             })
 
     return pd.DataFrame(all_records)
