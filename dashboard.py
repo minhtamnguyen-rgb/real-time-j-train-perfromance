@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import duckdb
 from datetime import datetime, timezone
+import os
 
 st.set_page_config(
     page_title="J/Z Train Performance",
@@ -128,6 +129,12 @@ st.markdown("""
 def load_features():
     try:
         con = duckdb.connect(WAREHOUSE_PATH, read_only=True)
+        con.execute(f"""
+            SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
+            SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
+            SET s3_endpoint='{os.environ["R2_ENDPOINT_HOSTNAME"]}';
+            SET s3_url_style='path';
+        """)
         df = con.execute("""
             SELECT * FROM fct_jz_performance
             ORDER BY window_start DESC
@@ -197,10 +204,10 @@ with left:
 
 with right:
     st.subheader("Delay severity breakdown")
-    if all(c in df.columns for c in ["severe_count", "moderate_count", "minor_count"]):
-        sev_df = df[["window_start", "severe_count", "moderate_count", "minor_count"]]\
+    if all(c in df.columns for c in ["severe_count", "moderate_count", "minor_count", "on_time_count"]):
+        sev_df = df[["window_start", "on_time_count", "minor_count", "moderate_count", "severe_count"]]\
             .set_index("window_start").tail(20).sort_index()
-        st.bar_chart(sev_df, color=["#ff2d78", "#ffb300", "#00ffe7"])
+        st.bar_chart(sev_df, color=["#00ffe7", "#ffb300", "#ff6b35", "#ff2d78"])
     else:
         st.info("No severity breakdown yet.")
 
@@ -209,7 +216,12 @@ st.divider()
 # ---------- Active alerts ----------
 # ---------- Alerts ----------
 con = duckdb.connect("warehouse/dev.duckdb", read_only=True)
-
+con.execute(f"""
+    SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
+    SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
+    SET s3_endpoint='{os.environ["R2_ENDPOINT_HOSTNAME"]}';
+    SET s3_url_style='path';
+""")
 ongoing = con.execute("""
     SELECT route_id, header, hours_since_start
     FROM dim_alerts_active
