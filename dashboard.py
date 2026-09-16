@@ -171,9 +171,10 @@ st.markdown(
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
-    st.metric("AVG DELAY", f"{latest['avg_delay_sec']:.0f}s")
+    gap = latest['avg_headway_gap_sec']
+    st.metric("AVG HEADWAY GAP", f"{int(gap//60)}m {int(gap%60)}s" if pd.notna(gap) else "—")
 with col2:
-    st.metric("MAX DELAY", f"{latest['max_delay_sec']:.0f}s")
+    st.metric("MAX HEADWAY GAP", f"{int(latest['max_headway_gap_sec']//60)}m" if pd.notna(latest['max_headway_gap_sec']) else "—")
 with col3:
     pct = latest['pct_delayed']
     st.metric("% DELAYED", f"{pct:.1f}%" if pd.notna(pct) else "—")
