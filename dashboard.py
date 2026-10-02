@@ -176,8 +176,10 @@ with col1:
 with col2:
     st.metric("MAX HEADWAY GAP", f"{int(latest['max_headway_gap_sec']//60)}m" if pd.notna(latest['max_headway_gap_sec']) else "—")
 with col3:
-    pct = latest['pct_delayed']
-    st.metric("% DELAYED", f"{pct:.1f}%" if pd.notna(pct) else "—")
+    on_time = latest['on_time_count']
+    total = latest['delay_records']
+    pct_on_time = round(on_time / total * 100, 1) if total > 0 else None
+    st.metric("ON-TIME RATE", f"{pct_on_time:.1f}%" if pct_on_time else "—")
 with col4:
     st.metric("ALERTS", f"{int(latest['alerts_active'])}")
 with col5:
@@ -195,9 +197,9 @@ st.divider()
 left, right = st.columns([2, 1])
 
 with left:
-    st.subheader("Delay trend vs. temperature")
+    st.subheader("Headway gap vs. temperature")
     chart_df = (
-        df.set_index("window_start")[["avg_delay_sec", "temperature_c"]]
+        df.set_index("window_start")[["avg_headway_gap_sec", "temperature_c"]]
         .dropna(how="all")
         .sort_index()
     )
@@ -216,29 +218,32 @@ st.divider()
 
 # ---------- Active alerts ----------
 # ---------- Alerts ----------
-con = duckdb.connect("warehouse/dev.duckdb", read_only=True)
-con.execute(f"""
-    SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
-    SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
-    SET s3_endpoint='{os.environ["R2_ENDPOINT_HOSTNAME"]}';
-    SET s3_url_style='path';
-""")
-ongoing = con.execute("""
-    SELECT route_id, header, hours_since_start
-    FROM dim_alerts_active
-    WHERE alert_status = 'ongoing'
-    ORDER BY hours_since_start DESC
-""").fetchdf()
-
-upcoming = con.execute("""
-    SELECT route_id, header, hours_until_start, start_time, end_time
-    FROM dim_alerts_active
-    WHERE alert_status = 'upcoming'
-    ORDER BY hours_until_start ASC
-""").fetchdf()
-
-con.close()
-
+try:
+    con = duckdb.connect("warehouse/dev.duckdb", read_only=True)
+    con.execute(f"""
+        SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
+        SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
+        SET s3_endpoint='{os.environ["R2_ENDPOINT_HOSTNAME"]}';
+        SET s3_url_style='path';
+    """)
+    ongoing = con.execute("""
+        SELECT route_id, header, hours_since_start
+        FROM dim_alerts_active
+        WHERE alert_status = 'ongoing'
+        ORDER BY hours_since_start DESC
+    """).fetchdf()
+    upcoming = con.execute("""
+        SELECT route_id, header, hours_until_start, start_time, end_time
+        FROM dim_alerts_active
+        WHERE alert_status = 'upcoming'
+        ORDER BY hours_until_start ASC
+    """).fetchdf()
+except Exception as e:
+    st.error(f"Alert query failed: {e}")
+    ongoing = pd.DataFrame()
+    upcoming = pd.DataFrame()
+finally:
+    con.close()
 # Ongoing disruptions
 st.subheader("Ongoing disruptions")
 if ongoing.empty:
