@@ -10,7 +10,6 @@ st.set_page_config(
     layout="wide",
 )
 
-WAREHOUSE_PATH = "warehouse/dev.duckdb"
 
 # ---------- Neon techno style ----------
 st.markdown("""
@@ -125,10 +124,10 @@ st.markdown("""
 
 
 # ---------- Load data ----------
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=300)
 def load_features():
     try:
-        con = duckdb.connect(WAREHOUSE_PATH, read_only=True)
+        con = duckdb.connect()
         con.execute(f"""
             SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
             SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
@@ -136,15 +135,14 @@ def load_features():
             SET s3_url_style='path';
         """)
         df = con.execute("""
-            SELECT * FROM fct_jz_performance
+            SELECT * FROM read_parquet('s3://jz-pipeline/data/features/jz_combined/jz_features.parquet')
             ORDER BY window_start DESC
         """).fetchdf()
         con.close()
         return df
     except Exception as e:
-        st.error(f"Warehouse connection failed: {e}")
+        st.error(f"Connection failed: {e}")
         return pd.DataFrame()
-
 df = load_features()
 
 # ---------- Header ----------
@@ -176,10 +174,8 @@ with col1:
 with col2:
     st.metric("MAX HEADWAY GAP", f"{int(latest['max_headway_gap_sec']//60)}m" if pd.notna(latest['max_headway_gap_sec']) else "—")
 with col3:
-    on_time = latest['on_time_count']
-    total = latest['delay_records']
-    pct_on_time = round(on_time / total * 100, 1) if total > 0 else None
-    st.metric("ON-TIME RATE", f"{pct_on_time:.1f}%" if pct_on_time else "—")
+    pct = latest.get('pct_delayed', None)
+    st.metric("% DELAYED", f"{pct:.1f}%" if pd.notna(pct) else "—")
 with col4:
     st.metric("ALERTS", f"{int(latest['alerts_active'])}")
 with col5:
@@ -219,7 +215,7 @@ st.divider()
 # ---------- Active alerts ----------
 # ---------- Alerts ----------
 try:
-    con = duckdb.connect("warehouse/dev.duckdb", read_only=True)
+    con = duckdb.connect()
     con.execute(f"""
         SET s3_access_key_id='{os.environ["R2_ACCESS_KEY_ID"]}';
         SET s3_secret_access_key='{os.environ["R2_SECRET_ACCESS_KEY"]}';
@@ -228,22 +224,58 @@ try:
     """)
     ongoing = con.execute("""
         SELECT route_id, header, hours_since_start
-        FROM dim_alerts_active
+        FROM (
+            SELECT
+                unnest(route_ids) as route_id,
+                header,
+                start_time,
+                end_time,
+                extract(epoch from (now() - start_time::TIMESTAMPTZ)) / 3600 as hours_since_start,
+                case
+                    when start_time::TIMESTAMPTZ > now() then 'upcoming'
+                    when end_time is null then 'ongoing'
+                    when end_time::TIMESTAMPTZ > now() then 'active'
+                    else 'expired'
+                end as alert_status
+            FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
+            WHERE end_time IS NULL OR end_time::BIGINT > epoch(now())
+        )
         WHERE alert_status = 'ongoing'
+        AND route_id IN ('J', 'Z')
+        QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_since_start DESC) = 1
         ORDER BY hours_since_start DESC
     """).fetchdf()
+
     upcoming = con.execute("""
         SELECT route_id, header, hours_until_start, start_time, end_time
-        FROM dim_alerts_active
+        FROM (
+            SELECT
+                unnest(route_ids) as route_id,
+                header,
+                start_time,
+                end_time,
+                extract(epoch from (start_time::TIMESTAMPTZ - now())) / 3600 as hours_until_start,
+                case
+                    when start_time::BIGINT > epoch(now()) then 'upcoming'
+                    else 'other'
+                end as alert_status
+            FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
+        )
         WHERE alert_status = 'upcoming'
+        AND route_id IN ('J', 'Z')
+        QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_until_start ASC) = 1
         ORDER BY hours_until_start ASC
     """).fetchdf()
+
 except Exception as e:
     st.error(f"Alert query failed: {e}")
     ongoing = pd.DataFrame()
     upcoming = pd.DataFrame()
 finally:
     con.close()
+    
+    
+    
 # Ongoing disruptions
 st.subheader("Ongoing disruptions")
 if ongoing.empty:
