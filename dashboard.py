@@ -174,17 +174,17 @@ with col1:
 with col2:
     st.metric("MAX HEADWAY GAP", f"{int(latest['max_headway_gap_sec']//60)}m" if pd.notna(latest['max_headway_gap_sec']) else "—")
 with col3:
-    pct = latest.get('pct_delayed', None)
-    st.metric("% DELAYED", f"{pct:.1f}%" if pd.notna(pct) else "—")
+    records = latest.get('delay_records', None)
+    st.metric("DELAY RECORDS", f"{int(records)}" if pd.notna(records) else "—")
 with col4:
     st.metric("ALERTS", f"{int(latest['alerts_active'])}")
 with col5:
     temp = latest["temperature_c"]
-    heat = " 🔥" if latest.get("is_extreme_heat") else ""
+    heat = " 🔥" if latest.get("is_extreme_heat") is True else ""
     st.metric("TEMP", f"{temp:.1f}°C{heat}" if pd.notna(temp) else "—")
 with col6:
     precip = latest["precip_mm"]
-    rain = " 🌧" if latest.get("is_precip") else ""
+    rain = " 🌧" if latest.get("is_precip") is True else ""
     st.metric("PRECIP", f"{precip:.1f}mm{rain}" if pd.notna(precip) else "—")
 
 st.divider()
@@ -202,13 +202,13 @@ with left:
     st.line_chart(chart_df, color=["#00ffe7", "#ff2d78"])
 
 with right:
-    st.subheader("Delay severity breakdown")
-    if all(c in df.columns for c in ["severe_count", "moderate_count", "minor_count", "on_time_count"]):
-        sev_df = df[["window_start", "on_time_count", "minor_count", "moderate_count", "severe_count"]]\
-            .set_index("window_start").tail(20).sort_index()
-        st.bar_chart(sev_df, color=["#00ffe7", "#ffb300", "#ff6b35", "#ff2d78"])
+    st.subheader("Headway gap over time")
+    if "avg_headway_gap_sec" in df.columns:
+        gap_df = df.set_index("window_start")[["avg_headway_gap_sec"]]\
+            .dropna().sort_index().tail(20)
+        st.line_chart(gap_df, color=["#ff2d78"])
     else:
-        st.info("No severity breakdown yet.")
+        st.info("No headway data yet.")
 
 st.divider()
 
@@ -222,55 +222,60 @@ try:
         SET s3_endpoint='{os.environ["R2_ENDPOINT_HOSTNAME"]}';
         SET s3_url_style='path';
     """)
-    ongoing = con.execute("""
-        SELECT route_id, header, hours_since_start
-        FROM (
-            SELECT
-                unnest(route_ids) as route_id,
-                header,
-                start_time,
-                end_time,
-                extract(epoch from (now() - start_time::TIMESTAMPTZ)) / 3600 as hours_since_start,
-                case
-                    when start_time::TIMESTAMPTZ > now() then 'upcoming'
-                    when end_time is null then 'ongoing'
-                    when end_time::TIMESTAMPTZ > now() then 'active'
-                    else 'expired'
-                end as alert_status
-            FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
-            WHERE end_time IS NULL OR end_time::BIGINT > epoch(now())
-        )
-        WHERE alert_status = 'ongoing'
-        AND route_id IN ('J', 'Z')
-        QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_since_start DESC) = 1
-        ORDER BY hours_since_start DESC
-    """).fetchdf()
 
-    upcoming = con.execute("""
-        SELECT route_id, header, hours_until_start, start_time, end_time
-        FROM (
-            SELECT
-                unnest(route_ids) as route_id,
-                header,
-                start_time,
-                end_time,
-                extract(epoch from (start_time::TIMESTAMPTZ - now())) / 3600 as hours_until_start,
-                case
-                    when start_time::BIGINT > epoch(now()) then 'upcoming'
-                    else 'other'
-                end as alert_status
-            FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
-        )
-        WHERE alert_status = 'upcoming'
-        AND route_id IN ('J', 'Z')
-        QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_until_start ASC) = 1
-        ORDER BY hours_until_start ASC
-    """).fetchdf()
+    try:
+        ongoing = con.execute("""
+            SELECT route_id, header, hours_since_start
+            FROM (
+                SELECT
+                    unnest(route_ids) as route_id,
+                    header,
+                    start_time,
+                    end_time,
+                    extract(epoch from (now() - start_time::TIMESTAMPTZ)) / 3600 as hours_since_start,
+                    case
+                        when start_time::TIMESTAMPTZ > now() then 'upcoming'
+                        when end_time is null then 'ongoing'
+                        when end_time::TIMESTAMPTZ > now() then 'active'
+                        else 'expired'
+                    end as alert_status
+                FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
+                WHERE end_time IS NULL OR end_time::TIMESTAMPTZ > now()
+            )
+            WHERE alert_status = 'ongoing'
+            AND route_id IN ('J', 'Z')
+            QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_since_start DESC) = 1
+            ORDER BY hours_since_start DESC
+        """).fetchdf()
+    except Exception as e:
+        st.error(f"Ongoing alerts failed: {e}")
+        ongoing = pd.DataFrame()
 
-except Exception as e:
-    st.error(f"Alert query failed: {e}")
-    ongoing = pd.DataFrame()
-    upcoming = pd.DataFrame()
+    try:
+        upcoming = con.execute("""
+            SELECT route_id, header, hours_until_start, start_time, end_time
+            FROM (
+                SELECT
+                    unnest(route_ids) as route_id,
+                    header,
+                    start_time,
+                    end_time,
+                    extract(epoch from (start_time::TIMESTAMPTZ - now())) / 3600 as hours_until_start,
+                    case
+                        when start_time::TIMESTAMPTZ > now() then 'upcoming'
+                        else 'other'
+                    end as alert_status
+                FROM read_parquet('s3://jz-pipeline/data/processed/alerts/*.parquet')
+            )
+            WHERE alert_status = 'upcoming'
+            AND route_id IN ('J', 'Z')
+            QUALIFY row_number() OVER (PARTITION BY route_id, header ORDER BY hours_until_start ASC) = 1
+            ORDER BY hours_until_start ASC
+        """).fetchdf()
+    except Exception as e:
+        st.error(f"Upcoming alerts failed: {e}")
+        upcoming = pd.DataFrame()
+
 finally:
     con.close()
     
@@ -325,12 +330,11 @@ if extreme.empty:
 else:
     st.dataframe(
         extreme[[
-            "window_start", "route_id", "avg_delay_sec",
-            "temperature_c", "alerts_active", "pct_delayed"
+            "window_start", "route_id", "avg_headway_gap_sec",
+            "temperature_c", "alerts_active"
         ]],
         use_container_width=True,
     )
-
 st.divider()
 
 # ---------- Raw table ----------
